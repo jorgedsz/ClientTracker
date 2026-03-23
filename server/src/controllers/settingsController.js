@@ -92,7 +92,7 @@ const healthCheck = async (req, res) => {
     try {
       const whatsappService = require('../services/whatsappService');
       const waStatus = await whatsappService.getStatus();
-      whatsappStatus = waStatus.connected ? 'connected' : 'disconnected';
+      whatsappStatus = waStatus.status === 'connected' ? 'connected' : 'disconnected';
     } catch {
       whatsappStatus = 'disconnected';
     }

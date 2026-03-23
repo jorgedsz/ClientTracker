@@ -38,7 +38,7 @@ const getOverview = async (req, res) => {
     try {
       const whatsappService = require('../services/whatsappService');
       const waStatus = await whatsappService.getStatus();
-      whatsappConnected = waStatus.connected || false;
+      whatsappConnected = waStatus.status === 'connected';
     } catch {
       whatsappConnected = false;
     }
