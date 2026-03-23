@@ -4,7 +4,7 @@ const encryption = require('../utils/encryption');
 
 const getAuthUrl = async (req, res) => {
   try {
-    const url = gmailService.getAuthUrl();
+    const url = await gmailService.getAuthUrl();
     res.json({ url });
   } catch (error) {
     res.status(500).json({ error: error.message });
