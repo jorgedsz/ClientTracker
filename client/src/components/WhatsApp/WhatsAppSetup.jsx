@@ -1,50 +1,64 @@
-import { useState, useEffect } from 'react';
-import { MessageCircle, Wifi, WifiOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MessageCircle, Wifi, WifiOff, Loader } from 'lucide-react';
 import { getWhatsAppStatus, connectWhatsApp, disconnectWhatsApp, getWhatsAppQr, getWhatsAppMessages } from '../../services/api';
 
 export default function WhatsAppSetup() {
-  const [status, setStatus] = useState({ connected: false });
+  const [connected, setConnected] = useState(false);
   const [qr, setQr] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const pollRef = useRef(null);
 
-  const loadStatus = () => {
-    getWhatsAppStatus()
-      .then((res) => setStatus(res.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  const checkStatus = async () => {
+    try {
+      const res = await getWhatsAppStatus();
+      const isConnected = res.data.status === 'connected';
+      setConnected(isConnected);
+      if (isConnected) {
+        setQr(null);
+        setConnecting(false);
+        stopPolling();
+        // Load messages on connect
+        getWhatsAppMessages().then((r) => setMessages(r.data)).catch(() => {});
+      }
+      return isConnected;
+    } catch {
+      return false;
+    }
   };
 
   useEffect(() => {
-    loadStatus();
-    getWhatsAppMessages()
-      .then((res) => setMessages(res.data))
-      .catch(() => {});
+    checkStatus().finally(() => setLoading(false));
+    getWhatsAppMessages().then((res) => setMessages(res.data)).catch(() => {});
+    return stopPolling;
   }, []);
 
   const handleConnect = async () => {
     setConnecting(true);
     try {
       connectWhatsApp();
-      // Poll for QR code since it takes a few seconds to generate
-      let attempts = 0;
-      const poll = setInterval(async () => {
-        attempts++;
+      // Poll for QR and then for connection status
+      pollRef.current = setInterval(async () => {
+        // Check if connected
+        const isConnected = await checkStatus();
+        if (isConnected) return; // polling stopped inside checkStatus
+
+        // If not connected, check for QR
         try {
           const qrRes = await getWhatsAppQr();
           if (qrRes.data.qr) {
             setQr(qrRes.data.qr);
-            setConnecting(false);
-            clearInterval(poll);
           }
         } catch {}
-        if (attempts > 20) {
-          clearInterval(poll);
-          setConnecting(false);
-          alert('QR code generation timed out. Try again.');
-        }
-      }, 2000);
+      }, 3000);
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to connect');
       setConnecting(false);
@@ -53,9 +67,10 @@ export default function WhatsAppSetup() {
 
   const handleDisconnect = async () => {
     if (!confirm('Disconnect WhatsApp?')) return;
+    stopPolling();
     await disconnectWhatsApp();
     setQr(null);
-    loadStatus();
+    setConnected(false);
   };
 
   if (loading) return <p className="text-gray-500 dark:text-gray-400">Loading...</p>;
@@ -65,7 +80,7 @@ export default function WhatsAppSetup() {
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">WhatsApp Integration</h2>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-        {status.connected ? (
+        {connected ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -86,7 +101,9 @@ export default function WhatsAppSetup() {
               <div className="space-y-3">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Scan this QR code with WhatsApp</p>
                 <img src={qr} alt="WhatsApp QR" className="mx-auto max-w-xs" />
-                <button onClick={loadStatus} className="text-sm text-blue-600 hover:underline">Check status</button>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                  <Loader size={14} className="animate-spin" /> Waiting for scan...
+                </div>
               </div>
             ) : (
               <>
