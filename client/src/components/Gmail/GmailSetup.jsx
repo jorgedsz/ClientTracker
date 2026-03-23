@@ -19,8 +19,16 @@ export default function GmailSetup() {
   useEffect(loadStatus, []);
 
   const handleConnect = async () => {
-    const res = await getGmailAuthUrl();
-    window.location.href = res.data.url;
+    try {
+      const res = await getGmailAuthUrl();
+      if (res.data.url) {
+        window.location.href = res.data.url;
+      } else {
+        alert('Failed to get auth URL. Check that Google credentials are configured in environment variables.');
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to connect Gmail. Make sure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set.');
+    }
   };
 
   const handleDisconnect = async () => {
