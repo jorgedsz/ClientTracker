@@ -1,4 +1,11 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+let Client, LocalAuth;
+try {
+  const wwebjs = require('whatsapp-web.js');
+  Client = wwebjs.Client;
+  LocalAuth = wwebjs.LocalAuth;
+} catch {
+  console.warn('whatsapp-web.js not available - WhatsApp features disabled');
+}
 const qrcode = require('qrcode');
 
 let client = null;
@@ -21,6 +28,9 @@ function getQrCode() {
 }
 
 async function initialize(prisma) {
+  if (!Client) {
+    throw new Error('WhatsApp is not available in this environment');
+  }
   if (client) {
     await disconnect();
   }
