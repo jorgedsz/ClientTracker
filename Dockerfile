@@ -1,6 +1,6 @@
 FROM node:18-slim
 
-# Install Chromium dependencies for whatsapp-web.js
+# Install Chromium and all dependencies for whatsapp-web.js
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     libglib2.0-0 \
@@ -21,9 +21,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     && rm -rf /var/lib/apt/lists/*
 
-# Tell puppeteer to use system chromium
+# Find and set the actual chromium path
+RUN CHROMIUM_PATH=$(which chromium || which chromium-browser || find / -name "chromium" -type f 2>/dev/null | head -1) \
+    && echo "CHROMIUM_PATH=$CHROMIUM_PATH" \
+    && echo "$CHROMIUM_PATH" > /etc/chromium-path
+
+# Tell puppeteer to skip download and use system chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PUPPETEER_EXECUTABLE_PATH=""
 
 WORKDIR /app
 
@@ -46,4 +51,5 @@ RUN cd client && npm run build
 
 EXPOSE ${PORT:-5001}
 
-CMD cd server && npx prisma migrate deploy && node src/index.js
+# Read chromium path at runtime and start
+CMD export PUPPETEER_EXECUTABLE_PATH=$(cat /etc/chromium-path) && cd server && npx prisma migrate deploy && node src/index.js
