@@ -39,12 +39,18 @@ async function initialize(prisma) {
   status = 'qr_pending';
   currentQr = null;
 
+  const authPath = process.env.WHATSAPP_DATA_PATH || '.wwebjs_auth';
+  const puppeteerOpts = {
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+  };
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    puppeteerOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
   client = new Client({
-    authStrategy: new LocalAuth({ dataPath: '.wwebjs_auth' }),
-    puppeteer: {
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    },
+    authStrategy: new LocalAuth({ dataPath: authPath }),
+    puppeteer: puppeteerOpts,
   });
 
   client.on('qr', async (qr) => {

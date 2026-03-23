@@ -5,6 +5,9 @@
     "nixpacksPlan": {
       "providers": ["node"],
       "phases": {
+        "setup": {
+          "nixPkgs": ["chromium", "nss", "freetype", "harfbuzz", "ca-certificates", "fontconfig"]
+        },
         "install": {
           "cmds": [
             "cd server && npm install",
