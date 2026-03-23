@@ -11,8 +11,8 @@ const getStatus = async (req, res) => {
 
 const getQr = async (req, res) => {
   try {
-    const qr = await whatsappService.getQrCode();
-    res.json(qr);
+    const qr = whatsappService.getQrCode();
+    res.json({ qr: qr || null });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

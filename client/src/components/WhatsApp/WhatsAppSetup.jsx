@@ -26,13 +26,29 @@ export default function WhatsAppSetup() {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      await connectWhatsApp();
-      const qrRes = await getWhatsAppQr();
-      setQr(qrRes.data.qr);
+      connectWhatsApp();
+      // Poll for QR code since it takes a few seconds to generate
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const qrRes = await getWhatsAppQr();
+          if (qrRes.data.qr) {
+            setQr(qrRes.data.qr);
+            setConnecting(false);
+            clearInterval(poll);
+          }
+        } catch {}
+        if (attempts > 20) {
+          clearInterval(poll);
+          setConnecting(false);
+          alert('QR code generation timed out. Try again.');
+        }
+      }, 2000);
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to connect');
+      setConnecting(false);
     }
-    setConnecting(false);
   };
 
   const handleDisconnect = async () => {
