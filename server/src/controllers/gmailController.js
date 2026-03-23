@@ -19,28 +19,11 @@ const oauthCallback = async (req, res) => {
       return res.status(400).json({ error: 'Authorization code is required' });
     }
 
-    const tokens = await gmailService.handleCallback(code);
+    // handleCallback stores tokens and returns { email }
+    await gmailService.handleCallback(code);
 
-    // Store tokens encrypted in AppSettings
-    const tokenEntries = [
-      { key: 'gmail_access_token', value: encryption.encrypt(tokens.access_token) },
-      { key: 'gmail_refresh_token', value: encryption.encrypt(tokens.refresh_token) },
-      { key: 'gmail_connected', value: 'true' },
-    ];
-
-    if (tokens.email) {
-      tokenEntries.push({ key: 'gmail_email', value: tokens.email });
-    }
-
-    for (const entry of tokenEntries) {
-      await req.prisma.appSettings.upsert({
-        where: { key: entry.key },
-        update: { value: entry.value },
-        create: { key: entry.key, value: entry.value },
-      });
-    }
-
-    res.redirect('http://localhost:5174/dashboard/gmail?connected=true');
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    res.redirect(`${baseUrl}/dashboard/gmail?connected=true`);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
