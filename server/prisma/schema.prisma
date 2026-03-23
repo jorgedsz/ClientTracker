@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id               Int       @id @default(autoincrement())
+  name             String
+  email            String?   @unique
+  phone            String?
+  company          String?
+  notes            String?
+  status           String    @default("active")
+  whatsappGroupId  String?
+  whatsappGroupName String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  meetings         Meeting[]
+  lessons          Lesson[]
+  whatsappMessages WhatsAppMessage[]
+}
+
+model Meeting {
+  id                Int       @id @default(autoincrement())
+  clientId          Int
+  title             String?
+  date              DateTime
+  transcriptionText String?
+  recordingUrl      String?
+  sourceEmailId     String?   @unique
+  rawEmailData      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  client            Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lesson            Lesson?
+}
+
+model Lesson {
+  id              Int       @id @default(autoincrement())
+  clientId        Int
+  meetingId       Int       @unique
+  title           String
+  summary         String
+  keyTakeaways    String
+  actionItems     String
+  rawAiResponse   String?
+  status          String    @default("completed")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  meeting         Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+model WhatsAppMessage {
+  id            Int       @id @default(autoincrement())
+  clientId      Int?
+  groupId       String
+  groupName     String?
+  sender        String
+  senderNumber  String?
+  message       String
+  timestamp     DateTime
+  isRequest     Boolean   @default(false)
+  requestNote   String?
+  createdAt     DateTime  @default(now())
+
+  client        Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, timestamp])
+}
+
+model EmailFilter {
+  id              Int       @id @default(autoincrement())
+  name            String?
+  senderPattern   String?
+  subjectPattern  String?
+  labelFilter     String?
+  contentPattern  String?
+  extractionType  String    @default("body")
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model AppSettings {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
